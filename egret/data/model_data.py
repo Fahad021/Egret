@@ -137,7 +137,7 @@ class ModelData(object):
         -------
             dict : a new model_data dictionary
         """
-        return {"elements": dict(), "system": dict()}
+        return {"elements": {}, "system": {}}
     
     def __init__(self, data=None):
         """
@@ -149,10 +149,7 @@ class ModelData(object):
            An initial model_data dictionary if it is available, otherwise, a new model_data
            dictionary is created.
         """
-        if data:
-            self.data = data
-        else:
-            self.data = ModelData.empty_model_data_dict()
+        self.data = data if data else ModelData.empty_model_data_dict()
 
     def elements(self, element_type, **kwargs):
         """
@@ -181,18 +178,13 @@ class ModelData(object):
         if element_type not in self.data['elements'].keys():
             return
 
-        if len(kwargs) == 0:
-            for name, elem in self.data['elements'][element_type].items():
-                yield name, elem
+        if not kwargs:
+            yield from self.data['elements'][element_type].items()
             return
 
         # additional attributes have been specified
         for name, elem in self.data['elements'][element_type].items():
-            include = True
-            for k, v in kwargs.items():
-                if k not in elem or elem[k] != v:
-                    include = False
-                    break
+            include = not any(k not in elem or elem[k] != v for k, v in kwargs.items())
             if include:
                 yield name, elem
 
@@ -231,14 +223,12 @@ class ModelData(object):
         if element_type not in self.data['elements']:
             return None
 
-        retdict = dict()
-        retdict['names'] = list()
-
+        retdict = {'names': []}
         for name, elem in self.elements(element_type=element_type, **kwargs):
             retdict['names'].append(name)
             for attrib, value in elem.items():
                 if attrib not in retdict:
-                    retdict[attrib] = dict()
+                    retdict[attrib] = {}
                 retdict[attrib][name] = value
 
         return retdict
@@ -324,7 +314,7 @@ class ModelData(object):
         """
         import json
 
-        with open(filename + '.json','w') as f:
+        with open(f'{filename}.json', 'w') as f:
             json.dump(self.data, f)
 
     def _replace_timeseries_with_value(self, node, timestamp):
@@ -351,14 +341,14 @@ def zip_items(dict_lb, dict_ub):
     return {k: (dict_lb[k], dict_ub[k]) for k in dict_lb.keys()}
 
 def _copy_only_in_service(data_dict):
-    new_dd = dict()
+    new_dd = {}
     for key, value in data_dict.items():
         if key == 'elements':
             ## value is the elements dictionary
-            new_dd[key] = dict()
+            new_dd[key] = {}
             new_elements = new_dd[key]
             for elements_name, elements in value.items():
-                new_elements[elements_name] = dict()
+                new_elements[elements_name] = {}
                 new_element_dict = new_elements[elements_name]
                 for element_name, element in elements.items():
                     if 'in_service' in element and (not element['in_service']):

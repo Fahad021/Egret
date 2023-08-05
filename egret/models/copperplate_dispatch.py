@@ -36,7 +36,10 @@ def _include_system_feasibility_slack(model, gen_attrs, bus_p_loads, penalty=100
                      )
     p_rhs_kwargs = {'include_feasibility_slack_pos':'p_slack_pos','include_feasibility_slack_neg':'p_slack_neg'}
 
-    p_penalty = penalty * (max([gen_attrs['p_cost'][k]['values'][1] for k in gen_attrs['names']]) + 1)
+    p_penalty = penalty * (
+        max(gen_attrs['p_cost'][k]['values'][1] for k in gen_attrs['names'])
+        + 1
+    )
 
     penalty_expr = p_penalty * (model.p_slack_pos + model.p_slack_neg)
     return p_rhs_kwargs, penalty_expr

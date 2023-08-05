@@ -10,6 +10,7 @@
 '''
 dcopf tester
 '''
+
 import os
 import math
 import unittest
@@ -21,15 +22,39 @@ from egret.parsers.matpower_parser import create_ModelData
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 case_names = ['pglib_opf_case3_lmbd','pglib_opf_case30_ieee','pglib_opf_case300_ieee']
-test_cases = [os.path.join(current_dir, 'transmission_test_instances', 'pglib-opf-master', '{}.m'.format(i)) for i in case_names]
-btheta_soln_cases = [os.path.join(current_dir, 'transmission_test_instances', 'dcopf_losses_solution_files', '{}_btheta_dcopf_losses_solution.json'.format(i)) for i in case_names]
-ptdf_soln_cases = [os.path.join(current_dir, 'transmission_test_instances', 'dcopf_losses_solution_files', '{}_ptdf_dcopf_losses_solution.json'.format(i)) for i in case_names]
+test_cases = [
+    os.path.join(
+        current_dir,
+        'transmission_test_instances',
+        'pglib-opf-master',
+        f'{i}.m',
+    )
+    for i in case_names
+]
+btheta_soln_cases = [
+    os.path.join(
+        current_dir,
+        'transmission_test_instances',
+        'dcopf_losses_solution_files',
+        f'{i}_btheta_dcopf_losses_solution.json',
+    )
+    for i in case_names
+]
+ptdf_soln_cases = [
+    os.path.join(
+        current_dir,
+        'transmission_test_instances',
+        'dcopf_losses_solution_files',
+        f'{i}_ptdf_dcopf_losses_solution.json',
+    )
+    for i in case_names
+]
 
 class TestBThetaDCOPF(unittest.TestCase):
     show_output = True
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         download_dir = os.path.join(current_dir, 'transmission_test_instances')
         if not os.path.exists(os.path.join(download_dir, 'pglib-opf-master')):
             from egret.thirdparty.get_pglib import get_pglib
@@ -44,9 +69,7 @@ class TestBThetaDCOPF(unittest.TestCase):
 
         md_dict = create_ModelData(test_case)
 
-        kwargs = {}
-        if include_kwargs:
-            kwargs = {'include_feasibility_slack': True}
+        kwargs = {'include_feasibility_slack': True} if include_kwargs else {}
         md, results = solve_dcopf_losses(md_dict, "ipopt", dcopf_losses_model_generator=dcopf_losses_model, solver_tee=False, return_results=True, **kwargs)
 
         self.assertTrue(results.solver.termination_condition == TerminationCondition.optimal)
@@ -66,9 +89,7 @@ class TestBThetaDCOPF(unittest.TestCase):
         from egret.models.acopf import solve_acopf
         md_dict, _, _ = solve_acopf(md_dict, "ipopt", solver_tee=False, return_model=True, return_results=True)
 
-        kwargs = {}
-        if include_kwargs:
-            kwargs = {'include_feasibility_slack': True}
+        kwargs = {'include_feasibility_slack': True} if include_kwargs else {}
         md, results = solve_dcopf_losses(md_dict, "ipopt", dcopf_losses_model_generator=dcopf_losses_model, solver_tee=False, return_results=True, **kwargs)
 
         self.assertTrue(results.solver.termination_condition == TerminationCondition.optimal)

@@ -52,9 +52,10 @@ def fuel_supply_model(model):
         return thermal_gen_attrs['fuel_supply'].keys()
 
     def gen_cost_fuel_validator(m,g):
-        if 'p_fuel' in thermal_gen_attrs and g in thermal_gen_attrs['p_fuel']:
-            pass
-        else:
+        if (
+            'p_fuel' not in thermal_gen_attrs
+            or g not in thermal_gen_attrs['p_fuel']
+        ):
             print('ERROR: All fuel-constrained generators must have "p_fuel" attribute which tracks their fuel consumption')
             print('ERROR: Could not find such an attribute for generator {}'.format(g))
             return False
@@ -102,11 +103,13 @@ def fuel_supply_model(model):
                 raise Exception('fuel_supply model requires one of KOW_startup_costs, MLR_startup_costs, or MLR_startup_costs2')
         else:
             return 0.
+
     model.StartupFuelConsumed = Expression(model.FuelSupplyGenerators, model.TimePeriods, rule=startup_fuel_consumed_rule)
 
     def fuel_consumed_constr_rule(m, g, t):
         ######  total fuel consumed   ==   fuel consumed above minimum + fuel consumed for being on and operating at p_min + fuel consumed for startup
         return m.FuelConsumed[g,t] == m.ProductionFuelConsumed[g,t] + _fuel_consumed_function(m,g,0)*m.UnitOn[g,t] + m.StartupFuelConsumed[g,t]
+
     model.FuelConsumedConstr = Constraint(model.FuelSupplyGenerators, model.TimePeriods, rule=fuel_consumed_constr_rule)
     ## end generator fuel consumption model
 
@@ -119,20 +122,22 @@ def fuel_supply_model(model):
         for g in m.FuelSupplyGenerators:
             if thermal_gen_attrs['fuel_supply'][g] == f:
                 yield g
+
     model.ThermalGeneratorsUsingInstFuelSupply = Set(model.InstantaneousFuelSupplies, initialize=gens_using_inst_fuel_supply_init,)
 
     model.InstFuelSupply = Param(model.InstantaneousFuelSupplies, model.TimePeriods, initialize=TimeMapper(inst_fuel_supply_attrs['fuel_available']))
 
     def total_fuel_consumed_expr(m, f, t):
-        return sum(m.FuelConsumed[g,t] for g in m.ThermalGeneratorsUsingInstFuelSupply[f]) 
+        return sum(m.FuelConsumed[g,t] for g in m.ThermalGeneratorsUsingInstFuelSupply[f])
+
     model.TotalFuelConsumedAtInstFuelSupply = Expression(model.InstantaneousFuelSupplies, model.TimePeriods, rule=total_fuel_consumed_expr)
 
     def total_fuel_consumed_rule(m, f, t):
         if m.ThermalGeneratorsUsingInstFuelSupply[f]:
             return m.TotalFuelConsumedAtInstFuelSupply[f,t] <= m.InstFuelSupply[f,t]
-        else:
-            if t == m.TimePeriods.first():
-                print('WARNING: no generators attached to fuel_supply {}'.format(f))
-            return Constraint.Feasible
+        if t == m.TimePeriods.first():
+            print('WARNING: no generators attached to fuel_supply {}'.format(f))
+        return Constraint.Feasible
+
     model.FuelLimitConstr = Constraint(model.InstantaneousFuelSupplies, model.TimePeriods, rule=total_fuel_consumed_rule)
     ## end instantaneous fuel supply model

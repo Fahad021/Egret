@@ -45,7 +45,10 @@ def _include_feasibility_slack(model, bus_attrs, gen_attrs, bus_p_loads, bus_q_l
     p_rhs_kwargs = {'include_feasibility_slack_pos':'p_slack_pos','include_feasibility_slack_neg':'p_slack_neg'}
     q_rhs_kwargs = {'include_feasibility_slack_pos':'q_slack_pos','include_feasibility_slack_neg':'q_slack_neg'}
 
-    p_penalty = penalty * (max([gen_attrs['p_cost'][k]['values'][1] for k in gen_attrs['names']]) + 1)
+    p_penalty = penalty * (
+        max(gen_attrs['p_cost'][k]['values'][1] for k in gen_attrs['names'])
+        + 1
+    )
     q_penalty = penalty * (max(gen_attrs.get('q_cost', gen_attrs['p_cost'])[k]['values'][1] for k in gen_attrs['names']) + 1)
 
     penalty_expr = sum(p_penalty * (model.p_slack_pos[bus_name] + model.p_slack_neg[bus_name])
@@ -122,21 +125,19 @@ def create_psv_acopf_model(model_data, include_feasibility_slack=False):
     ### declare the current flows in the branches
     vr_init = {k: bus_attrs['vm'][k] * pe.cos(bus_attrs['va'][k]) for k in bus_attrs['vm']}
     vj_init = {k: bus_attrs['vm'][k] * pe.sin(bus_attrs['va'][k]) for k in bus_attrs['vm']}
-    s_max = {k: branches[k]['rating_long_term'] for k in branches.keys()}
-    s_lbub = dict()
-    for k in branches.keys():
-        if s_max[k] is None:
-            s_lbub[k] = (None, None)
-        else:
-            s_lbub[k] = (-s_max[k],s_max[k])
+    s_max = {k: branches[k]['rating_long_term'] for k in branches}
+    s_lbub = {
+        k: (None, None) if s_max[k] is None else (-s_max[k], s_max[k])
+        for k in branches
+    }
     pf_bounds = s_lbub
     pt_bounds = s_lbub
     qf_bounds = s_lbub
     qt_bounds = s_lbub
-    pf_init = dict()
-    pt_init = dict()
-    qf_init = dict()
-    qt_init = dict()
+    pf_init = {}
+    pt_init = {}
+    qf_init = {}
+    qt_init = {}
     for branch_name, branch in branches.items():
         from_bus = branch['from_bus']
         to_bus = branch['to_bus']

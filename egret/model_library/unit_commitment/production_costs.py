@@ -197,7 +197,7 @@ def _step_coeff(upper, lower, susd):
         return upper - susd
     elif susd <= lower:
         return upper - lower
-    elif upper <= susd:
+    else:
         return 0
     print("Something went wrong, step_coeff is returning None...")
     print("lower: ", lower)
@@ -330,42 +330,41 @@ def _KOW_production_costs(model, tightened = False, rescaled = False):
             if m.MinimumUpTime[g] > 1:
                 return m.PiecewiseProduction[g,t,i] <= (m.PowerGenerationPiecewisePoints[g,t][i+1] - m.PowerGenerationPiecewisePoints[g,t][i])*m.UnitOn[g,t] \
                                         - su_step*m.UnitStart[g,t] \
-                                        - sd_step*m.UnitStop[g,t+1] 
-            else: ## MinimumUpTime[g] <= 1
-                expr = (m.PowerGenerationPiecewisePoints[g,t][i+1] - m.PowerGenerationPiecewisePoints[g,t][i])*m.UnitOn[g,t] \
-                                        - su_step*m.UnitStart[g,t] 
-                if tightened:
-                    expr -= max(su_step - sd_step, 0)*m.UnitStop[g,t+1]
-                return m.PiecewiseProduction[g,t,i] <= expr 
+                                        - sd_step*m.UnitStop[g,t+1]
+            expr = (m.PowerGenerationPiecewisePoints[g,t][i+1] - m.PowerGenerationPiecewisePoints[g,t][i])*m.UnitOn[g,t] \
+                                    - su_step*m.UnitStart[g,t]
+            if tightened:
+                expr -= max(su_step - sd_step, 0)*m.UnitStop[g,t+1]
+            return m.PiecewiseProduction[g,t,i] <= expr 
 
         else: ## t >= value(m.NumTimePeriods)
             return m.PiecewiseProduction[g,t,i] <= (m.PowerGenerationPiecewisePoints[g,t][i+1] - m.PowerGenerationPiecewisePoints[g,t][i])*m.UnitOn[g,t] \
                                         - su_step*m.UnitStart[g,t] 
-            
+
     model.PiecewiseProductionLimits = Constraint( model.PiecewiseProductionCostsIndexSet, rule=piecewise_production_limits_rule )
-    
+
     def piecewise_production_limits_rule2(m, g, t, i):
         ### these can always be tightened based on SU/SD, regardless of the ramping/aggregation
         ### since PowerGenerationPiecewisePoints are scaled to MinimumPowerOutput, we need to scale Startup/Shutdown ramps to it as well
-        if m.MinimumUpTime[g] <= 1 and t < value(m.NumTimePeriods):
-            upper = value(m.PowerGenerationPiecewisePoints[g,t][i+1])
-            lower = value(m.PowerGenerationPiecewisePoints[g,t][i])
-            SD = value(m.ScaledShutdownRampLimit[g])
-            minP = value(m.MinimumPowerOutput[g])
-
-            sd_step = _step_coeff(upper, lower, SD-minP)
-            expr = (m.PowerGenerationPiecewisePoints[g,t][i+1] - m.PowerGenerationPiecewisePoints[g,t][i])*m.UnitOn[g,t] \
-                                        - sd_step*m.UnitStop[g,t+1] 
-            if tightened:
-                SU = value(m.ScaledStartupRampLimit[g])
-                su_step = _step_coeff(upper, lower, SU-minP)
-                expr -= max(sd_step - su_step, 0)*m.UnitStart[g,t]
-            return m.PiecewiseProduction[g,t,i] <= expr
-        else: ## MinimumUpTime[g] > 1 or we added it in the t == value(m.NumTimePeriods) clause above
+        if m.MinimumUpTime[g] > 1 or t >= value(m.NumTimePeriods):
             return Constraint.Skip
-        
+
+        upper = value(m.PowerGenerationPiecewisePoints[g,t][i+1])
+        lower = value(m.PowerGenerationPiecewisePoints[g,t][i])
+        SD = value(m.ScaledShutdownRampLimit[g])
+        minP = value(m.MinimumPowerOutput[g])
+
+        sd_step = _step_coeff(upper, lower, SD-minP)
+        expr = (m.PowerGenerationPiecewisePoints[g,t][i+1] - m.PowerGenerationPiecewisePoints[g,t][i])*m.UnitOn[g,t] \
+                                    - sd_step*m.UnitStop[g,t+1]
+        if tightened:
+            SU = value(m.ScaledStartupRampLimit[g])
+            su_step = _step_coeff(upper, lower, SU-minP)
+            expr -= max(sd_step - su_step, 0)*m.UnitStart[g,t]
+        return m.PiecewiseProduction[g,t,i] <= expr
+
     model.PiecewiseProductionLimits2 = Constraint( model.PiecewiseProductionCostsIndexSet, rule=piecewise_production_limits_rule2 )
-    
+
     if rescaled:
         _rescaled_basic_production_costs_constr(model)
     else:

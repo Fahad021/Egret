@@ -64,12 +64,12 @@ def _btheta_dcopf_network_model(md,block):
 
     ref_angle = md.data['system']['reference_bus_angle']
     if ref_angle != 0.0:
-        raise ValueError('The BTHETA DCOPF formulation currently only supports'
-                         ' a reference bus angle of 0 degrees, but an angle'
-                         ' of {} degrees was found.'.format(ref_angle))
+        raise ValueError(
+            f'The BTHETA DCOPF formulation currently only supports a reference bus angle of 0 degrees, but an angle of {ref_angle} degrees was found.'
+        )
 
-    p_max = {k: branches[k]['rating_long_term'] for k in branches.keys()}
-    p_lbub = {k: (-p_max[k],p_max[k]) for k in branches.keys()}
+    p_max = {k: branches[k]['rating_long_term'] for k in branches}
+    p_lbub = {k: (-p_max[k],p_max[k]) for k in branches}
     pf_bounds = p_lbub
 
     libbranch.declare_var_pf(model=block,

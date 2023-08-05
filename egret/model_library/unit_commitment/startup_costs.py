@@ -34,21 +34,41 @@ def KOW_startup_costs(model, add_startup_cost_var=True):
         if len(m.ScaledStartupLags[g]) <= 1:
             return []
                                         ## adds the necessary index for starting-up after a shutdown before the time horizon began
-        return (t for t in (list(m.TimePeriods)+([] if (value(m.UnitOnT0State[g]) >= 0) else [m.InitialTime + int(round(value(m.UnitOnT0State[g]/value(m.TimePeriodLengthHours))))])))
+        return iter(
+            list(m.TimePeriods)
+            + (
+                []
+                if (value(m.UnitOnT0State[g]) >= 0)
+                else [
+                    m.InitialTime
+                    + int(
+                        round(
+                            value(
+                                m.UnitOnT0State[g]
+                                / value(m.TimePeriodLengthHours)
+                            )
+                        )
+                    )
+                ]
+            )
+        )
+
     model.ValidShutdownTimePeriods=Set(model.ThermalGenerators, initialize=ValidShutdownTimePeriods_generator)
-    
+
     def ShutdownHotStartupPairs_generator(m,g):
         ## for speed, if we don't have different startups
         if len(m.ScaledStartupLags[g]) <= 1:
             return [] 
         return ((t_prime, t) for t_prime in m.ValidShutdownTimePeriods[g] for t in m.TimePeriods if (m.ScaledStartupLags[g].first() <= t - t_prime < m.ScaledStartupLags[g].last()))
+
     model.ShutdownHotStartupPairs = Set(model.ThermalGenerators, initialize=ShutdownHotStartupPairs_generator, dimen=2)
-    
+
     # (g,t',t) will be an inidicator for g for shutting down at time t' and starting up at time t
     def StartupIndicator_domain_generator(m):
-        return ((g,t_prime,t) for g in m.ThermalGenerators for t_prime,t in m.ShutdownHotStartupPairs[g]) 
+        return ((g,t_prime,t) for g in m.ThermalGenerators for t_prime,t in m.ShutdownHotStartupPairs[g])
+
     model.StartupIndicator_domain=Set(initialize=StartupIndicator_domain_generator, dimen=3)
-    
+
     if _is_relaxed(model):
         model.StartupIndicator=Var(model.StartupIndicator_domain, within=UnitInterval)
     else:
@@ -57,15 +77,17 @@ def KOW_startup_costs(model, add_startup_cost_var=True):
     ############################################################
     # compute the per-generator, per-time period startup costs #
     ############################################################
-    
+
     def startup_match_rule(m, g, t):
         return sum(m.StartupIndicator[g, t_prime, s] for (t_prime, s) in m.ShutdownHotStartupPairs[g] if s == t) <= m.UnitStart[g,t]
+
     model.StartupMatch = Constraint(model.ThermalGenerators, model.TimePeriods, rule=startup_match_rule)
-    
+
     def GeneratorShutdownPeriods_generator(m):
         return ((g,t) for g in m.ThermalGenerators for t in m.ValidShutdownTimePeriods[g])
+
     model.GeneratorShutdownPeriods = Set(initialize=GeneratorShutdownPeriods_generator, dimen=2)
-    
+
     def shutdown_match_rule(m, g, t):
         if t < m.InitialTime:
             begin_pairs = [(s, t_prime) for (s, t_prime) in m.ShutdownHotStartupPairs[g] if s == t]
@@ -75,18 +97,19 @@ def KOW_startup_costs(model, add_startup_cost_var=True):
                 return sum(m.StartupIndicator[g, s, t_prime] for (s, t_prime) in begin_pairs) <= 1
         else:
             return sum(m.StartupIndicator[g, s, t_prime] for (s, t_prime) in m.ShutdownHotStartupPairs[g] if s == t) <= m.UnitStop[g,t]
+
     model.ShutdownMatch = Constraint(model.GeneratorShutdownPeriods, rule=shutdown_match_rule)
 
     if add_startup_cost_var:
         model.StartupCost = Var(model.ThermalGenerators, model.TimePeriods, within=Reals)
-    
+
     def ComputeStartupCost2_rule(m,g,t):
         return m.StartupCost[g,t] == m.StartupCosts[g].last()*m.UnitStart[g,t] + \
                                       sum( (list(m.StartupCosts[g])[s-1] - m.StartupCosts[g].last()) * \
                                          sum( m.StartupIndicator[g,tp,t] for tp in m.ValidShutdownTimePeriods[g] \
                                            if (list(m.ScaledStartupLags[g])[s-1] <= t - tp < (list(m.ScaledStartupLags[g])[s])) ) \
                                          for s in m.StartupCostIndices[g] if s < len(m.StartupCostIndices[g]))
-    
+
     model.ComputeStartupCosts=Constraint(model.ThermalGenerators, model.TimePeriods, rule=ComputeStartupCost2_rule)
 
     return

@@ -20,8 +20,8 @@ def dicts_of_vr_vj(buses):
     Create dictionaries of vr and vj values from the bus vm and va values
     """
     # TODO: Change api to be vr_vj_dicts_from_vm_va(bus_vm, bus_va)
-    vr = dict()
-    vj = dict()
+    vr = {}
+    vj = {}
     for bus_name, bus in buses.items():
         vr[bus_name] = tx_calc.calculate_vr_from_vm_va(bus['vm'], bus['va'])
         vj[bus_name] = tx_calc.calculate_vj_from_vm_va(bus['vm'], bus['va'])
@@ -76,11 +76,7 @@ def dict_of_branch_currents(branches, buses):
     Create a dictionary of the branch currents
     (with subkeys ifr, ifj, itr, itj)
     """
-    branch_currents = dict()
-    branch_currents['ifr'] = dict()
-    branch_currents['ifj'] = dict()
-    branch_currents['itr'] = dict()
-    branch_currents['itj'] = dict()
+    branch_currents = {'ifr': {}, 'ifj': {}, 'itr': {}, 'itj': {}}
     for branch_name, branch in branches.items():
         from_bus = buses[branch['from_bus']]
         to_bus = buses[branch['to_bus']]
@@ -113,11 +109,7 @@ def dict_of_branch_powers(branches, buses):
     Create a dictionary of the branch powers
     (with subkeys pf, qf, pt, qt)
     """
-    branch_powers = dict()
-    branch_powers['pf'] = dict()
-    branch_powers['qf'] = dict()
-    branch_powers['pt'] = dict()
-    branch_powers['qt'] = dict()
+    branch_powers = {'pf': {}, 'qf': {}, 'pt': {}, 'qt': {}}
     for branch_name, branch in branches.items():
         from_bus = buses[branch['from_bus']]
         to_bus = buses[branch['to_bus']]
@@ -154,8 +146,8 @@ def inlet_outlet_branches_by_bus(branches, buses):
     Return dictionaries of the inlet and outlet branches
     to each bus
     """
-    inlet_branches_by_bus = {k: list() for k in buses.keys()}
-    outlet_branches_by_bus ={k: list() for k in buses.keys()}
+    inlet_branches_by_bus = {k: [] for k in buses.keys()}
+    outlet_branches_by_bus = {k: [] for k in buses.keys()}
 
     for branch_name, branch in branches.items():
         inlet_branches_by_bus[branch['to_bus']].append(branch_name)
@@ -168,7 +160,7 @@ def gens_by_bus(buses, gens):
     """
     Return a dictionary of the generators attached to each bus
     """
-    gens_by_bus = {k: list() for k in buses.keys()}
+    gens_by_bus = {k: [] for k in buses.keys()}
     for gen_name, gen in gens.items():
         gens_by_bus[gen['bus']].append(gen_name)
 
@@ -380,21 +372,12 @@ def _scale_by_baseMVA(normal_op, inverse_op, element, attr_name, attr, baseMVA):
 ## NOTE: specifying inplace returns None
 def _convert_modeldata_pu(model_data, transform_func, inplace):
 
-    if inplace:
-        md = model_data
-    else:
-        md = model_data.clone()
+    md = model_data if inplace else model_data.clone()
     baseMVA = float(md.data['system']['baseMVA'])
 
     for (attr_type, element_type), attributes in scaled_attributes.items():
 
-        if attr_type == 'system_attributes':
-            system_dict = md.data['system']
-            for name, sys_attr in system_dict.items():
-                if name in attributes:
-                    transform_func(system_dict, name, sys_attr, baseMVA)
-        
-        elif attr_type == 'element_type':
+        if attr_type == 'element_type':
             if element_type not in md.data['elements']:
                 continue
             element_dict = md.data['elements'][element_type]
@@ -402,6 +385,12 @@ def _convert_modeldata_pu(model_data, transform_func, inplace):
                 for attr_name, attr in element.items():
                     if attr_name in attributes:
                         transform_func(element, attr_name, attr, baseMVA)
+
+        elif attr_type == 'system_attributes':
+            system_dict = md.data['system']
+            for name, sys_attr in system_dict.items():
+                if name in attributes:
+                    transform_func(system_dict, name, sys_attr, baseMVA)
 
     if inplace:
         return

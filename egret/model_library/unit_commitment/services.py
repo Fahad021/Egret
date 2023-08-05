@@ -198,10 +198,10 @@ def ancillary_services(model):
                              ]
 
     if 'zone' not in elements:
-        elements['zone'] = dict()
+        elements['zone'] = {}
     if 'area' not in elements:
-        elements['area'] = dict()
-    
+        elements['area'] = {}
+
     ## check and see if each one of these services appears anywhere in model_data
     def _check_for_requirement( requirement ):
         if requirement in system:
@@ -223,7 +223,7 @@ def ancillary_services(model):
     add_flexi_ramp_reserve = (_check_for_requirement('flexible_ramp_up_requirement') or
                             _check_for_requirement('flexible_ramp_down_requirement'))
 
-    
+
     ## check here and break if there's nothing to do
     no_reserves = not (add_spinning_reserve or add_non_spinning_reserve or add_regulation_reserve or add_supplemental_reserve or add_flexi_ramp_reserve)
     if no_reserves:
@@ -255,15 +255,16 @@ def ancillary_services(model):
                                   initialize=system.get('flexible_ramp_penalty_price'))
 
     thermal_gen_attrs = md.attributes(element_type='generator', generator_type='thermal')
-    
+
     def zone_initializer_builder(reserve_checker):
         def init_reserve_zone(m):
             for an, area in elements['area'].items():
                 if reserve_checker(area):
-                    yield 'area_'+an
+                    yield f'area_{an}'
             for zn, zone in elements['zone'].items():
                 if reserve_checker(zone):
-                    yield 'zone_'+zn
+                    yield f'zone_{zn}'
+
         return init_reserve_zone
 
     zone_attrs = md.attributes(element_type='zone')
@@ -276,41 +277,34 @@ def ancillary_services(model):
             area_r_time = TimeMapper(area_attrs[reserve_product])
         def get_attribute(m, az, t):
             az_n = str(az)
-            if az_n[:5] == 'zone_':
+            if az_n.startswith('zone_'):
                 z_n = az_n[5:]
-                if z_n in zone_attrs[reserve_product]:
-                    return zone_r_time(m,z_n,t)
-                else:
-                    return 0.0
-            elif az_n[:5] == 'area_':
+                return zone_r_time(m,z_n,t) if z_n in zone_attrs[reserve_product] else 0.0
+            elif az_n.startswith('area_'):
                 a_n = az_n[5:]
-                if a_n in area_attrs[reserve_product]:
-                    return area_r_time(m,a_n,t)
-                else:
-                    return 0.0
+                return area_r_time(m,a_n,t) if a_n in area_attrs[reserve_product] else 0.0
             else:
                 raise Exception('Unexpected case in instance of zone_requirement_getter')
+
         return get_attribute
-    
+
     def gens_in_reserve_zone_getter(gen_attrs_subset=None):
-        if gen_attrs_subset is None:
-            gen_attrs = thermal_gen_attrs
-        else:
-            gen_attrs = gen_attrs_subset
+        gen_attrs = thermal_gen_attrs if gen_attrs_subset is None else gen_attrs_subset
         def get_gens_in_reserve_zone(m, az):
             az_n = str(az)
-            if az_n[:5] == 'zone_':
+            if az_n.startswith('zone_'):
                 z_n = az_n[5:]
                 for g in gen_attrs['names']:
                     if g in gen_attrs['area'] and gen_attrs['zone'][g] == z_n:
                         yield g
-            elif az_n[:5] == 'area_':
+            elif az_n.startswith('area_'):
                 a_n = az_n[5:]
                 for g in gen_attrs['names']:
                     if g in gen_attrs['area'] and gen_attrs['area'][g] == a_n:
                         yield g
             else:
                 raise Exception('Unexpected case in instance of gens_in_reserve_zone_getter')
+
         return get_gens_in_reserve_zone
 
     ## these need to be added by high-quality to low-quality,
@@ -336,6 +330,7 @@ def ancillary_services(model):
                     + (m.SupplementalSpinReserveDispatched[g,t] if add_supplemental_reserve else 0.) \
                 <= m.MaximumPowerOutput[g]*m.UnitOn[g,t] \
                     - ((m.MaximumPowerOutput[g] - m.RegulationHighLimit[g])*m.RegulationOn[g,t] if add_regulation_reserve else 0.)
+
     model.AncillaryServiceCapacityLimitUpper = Constraint(model.ThermalGenerators, model.TimePeriods, rule=ancillary_service_capacity_limit_upper)
 
     def ancillary_service_capacity_limit_lower(m, g, t):
@@ -346,6 +341,7 @@ def ancillary_services(model):
                     - (m.RegulationReserveDn[g,t] if add_regulation_reserve else 0.) \
                 >= \
                     ((m.RegulationLowLimit[g] - m.MinimumPowerOutput[g])*m.RegulationOn[g,t] if add_regulation_reserve else 0.)
+
     model.AncillaryServiceCapacityLimitLower = Constraint(model.ThermalGenerators, model.TimePeriods, rule=ancillary_service_capacity_limit_lower)
 
     ## NOTE: ScaledNominalRampUpLimit/ScaledNominalRampDownLimit and ScaledStartupRampLimit/ScaledShutdownRampLimit
@@ -356,18 +352,22 @@ def ancillary_services(model):
 
     def as_ramp_up(m,g):
         return m.NominalRampUpLimit[g]*m.TimePeriodLengthHours
+
     model.AS_ScaledNominalRampUpLimit = Param(model.ThermalGenerators, within=NonNegativeReals, initialize=as_ramp_up)
 
     def as_ramp_down(m,g):
         return m.NominalRampDownLimit[g]*m.TimePeriodLengthHours
+
     model.AS_ScaledNominalRampDownLimit = Param(model.ThermalGenerators, within=NonNegativeReals, initialize=as_ramp_down)
 
     def as_startup_ramp(m,g):
         return (m.StartupRampLimit[g] - m.MinimumPowerOutput[g])*m.TimePeriodLengthHours
+
     model.AS_ScaledStartupRampLessMin = Param(model.ThermalGenerators, within=NonNegativeReals, initialize=as_startup_ramp)
 
     def as_shutdown_ramp(m,g):
         return (m.ShutdownRampLimit[g] - m.MinimumPowerOutput[g])*m.TimePeriodLengthHours
+
     model.AS_ScaledShutdownRampLessMin = Param(model.ThermalGenerators, within=NonNegativeReals, initialize=as_shutdown_ramp)
 
     def ancillary_service_ramp_up_limit(m,g,t):
@@ -388,7 +388,8 @@ def ancillary_services(model):
                      + ((m.TimePeriodLengthMinutes/m.SupplementalReserveMinutes)*(m.SupplementalSpinReserveDispatched[g,t]+m.SupplementalSpinReserveDispatched[g,t-1])/2. if add_supplemental_reserve else 0.) \
                   <= \
                     m.AS_ScaledNominalRampUpLimit[g]*m.UnitOn[g,t] + \
-    		    (m.AS_ScaledStartupRampLessMin[g] - m.AS_ScaledNominalRampUpLimit[g])*m.UnitStart[g,t] 
+    		    (m.AS_ScaledStartupRampLessMin[g] - m.AS_ScaledNominalRampUpLimit[g])*m.UnitStart[g,t]
+
     model.AncillaryServiceRampUpLimit = Constraint(model.ThermalGenerators, model.TimePeriods, rule=ancillary_service_ramp_up_limit)
 
     ## NOTE: for the regulation and flexible down services, these subtract from power generated at t, so they get added here
@@ -412,6 +413,7 @@ def ancillary_services(model):
                   <= \
                     m.AS_ScaledNominalRampDownLimit[g]*m.UnitOn[g,t-1] + \
                     (m.AS_ScaledShutdownRampLessMin[g] - m.AS_ScaledNominalRampDownLimit[g])*m.UnitStop[g,t]
+
     model.AncillaryServiceRampDnLimit = Constraint(model.ThermalGenerators, model.TimePeriods, rule=ancillary_service_ramp_dn_limit)
 
 

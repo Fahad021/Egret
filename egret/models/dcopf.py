@@ -38,7 +38,10 @@ def _include_feasibility_slack(model, bus_attrs, gen_attrs, bus_p_loads, penalty
                      )
     p_rhs_kwargs = {'include_feasibility_slack_pos':'p_slack_pos','include_feasibility_slack_neg':'p_slack_neg'}
 
-    p_penalty = penalty * (max([gen_attrs['p_cost'][k]['values'][1] for k in gen_attrs['names']]) + 1)
+    p_penalty = penalty * (
+        max(gen_attrs['p_cost'][k]['values'][1] for k in gen_attrs['names'])
+        + 1
+    )
 
     penalty_expr = sum(p_penalty * (model.p_slack_pos[bus_name] + model.p_slack_neg[bus_name])
                     for bus_name in bus_attrs['names'])
@@ -100,10 +103,10 @@ def create_btheta_dcopf_model(model_data, include_angle_diff_limits=False, inclu
     ### declare the current flows in the branches
     vr_init = {k: bus_attrs['vm'][k] * pe.cos(bus_attrs['va'][k]) for k in bus_attrs['vm']}
     vj_init = {k: bus_attrs['vm'][k] * pe.sin(bus_attrs['va'][k]) for k in bus_attrs['vm']}
-    p_max = {k: branches[k]['rating_long_term'] for k in branches.keys()}
-    p_lbub = {k: (-p_max[k],p_max[k]) for k in branches.keys()}
+    p_max = {k: branches[k]['rating_long_term'] for k in branches}
+    p_lbub = {k: (-p_max[k],p_max[k]) for k in branches}
     pf_bounds = p_lbub
-    pf_init = dict()
+    pf_init = {}
     for branch_name, branch in branches.items():
         from_bus = branch['from_bus']
         to_bus = branch['to_bus']
@@ -216,10 +219,10 @@ def create_ptdf_dcopf_model(model_data, include_feasibility_slack=False,base_poi
     ### declare the current flows in the branches
     vr_init = {k: bus_attrs['vm'][k] * pe.cos(bus_attrs['va'][k]) for k in bus_attrs['vm']}
     vj_init = {k: bus_attrs['vm'][k] * pe.sin(bus_attrs['va'][k]) for k in bus_attrs['vm']}
-    p_max = {k: branches[k]['rating_long_term'] for k in branches.keys()}
-    p_lbub = {k: (-p_max[k],p_max[k]) for k in branches.keys()}
+    p_max = {k: branches[k]['rating_long_term'] for k in branches}
+    p_lbub = {k: (-p_max[k],p_max[k]) for k in branches}
     pf_bounds = p_lbub
-    pf_init = dict()
+    pf_init = {}
     for branch_name, branch in branches.items():
         from_bus = branch['from_bus']
         to_bus = branch['to_bus']
@@ -363,7 +366,7 @@ def solve_dcopf(model_data,
     return md
 
 def check_instance_feasibility(instance, tolerance, active_only=True):
-    infeasibilities = list()
+    infeasibilities = []
 
     for con in instance.component_data_objects(pe.Constraint, descend_into=True, sort=True):
         if active_only == False or con.active == True:
@@ -388,22 +391,18 @@ def check_instance_feasibility(instance, tolerance, active_only=True):
             infeasibilities.append('Var: {0} has an value ({1}) that is less than its lower bound ({2})'.format(
                 var.getname(True), value(var), lb))
 
-    if len(infeasibilities) > 0:
+    if infeasibilities:
         print("*** Infeasibilities found in check_instance_feasibility")
         for s in infeasibilities:
             print(s)
         print("***")
 
-    return len(infeasibilities) == 0
+    return not infeasibilities
 
 def compute_constraint_resid(con):
     bodyval = value(con.body)
-    upper_resid = 0
-    if con.upper is not None:
-        upper_resid = max(0, bodyval - value(con.upper))
-    lower_resid = 0
-    if con.lower is not None:
-        lower_resid = max(0, value(con.lower) - bodyval)
+    upper_resid = 0 if con.upper is None else max(0, bodyval - value(con.upper))
+    lower_resid = 0 if con.lower is None else max(0, value(con.lower) - bodyval)
     return  max(upper_resid, lower_resid)
 
 def constraint_resid_to_string(name, con, resid):
