@@ -223,7 +223,7 @@ def declare_eq_branch_power(model, index_set, branches, branch_attrs, coordinate
     m = model
 
     bus_pairs = zip_items(branch_attrs['from_bus'],branch_attrs['to_bus'])
-    unique_bus_pairs = list(set([val for idx,val in bus_pairs.items()]))
+    unique_bus_pairs = list({val for idx,val in bus_pairs.items()})
     declare_expr_c(model,unique_bus_pairs,coordinate_type)
     declare_expr_s(model,unique_bus_pairs,coordinate_type)
 

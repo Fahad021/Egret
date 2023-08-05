@@ -93,9 +93,9 @@ def create_btheta_losses_dcopf_model(model_data, relaxation_type=RelaxationType.
     ### declare the current flows in the branches
     vr_init = {k: bus_attrs['vm'][k] * pe.cos(bus_attrs['va'][k]) for k in bus_attrs['vm']}
     vj_init = {k: bus_attrs['vm'][k] * pe.sin(bus_attrs['va'][k]) for k in bus_attrs['vm']}
-    p_max = {k: branches[k]['rating_long_term'] for k in branches.keys()}
-    pf_bounds = {k: (-p_max[k],p_max[k]) for k in branches.keys()}
-    pf_init = dict()
+    p_max = {k: branches[k]['rating_long_term'] for k in branches}
+    pf_bounds = {k: (-p_max[k],p_max[k]) for k in branches}
+    pf_init = {}
     for branch_name, branch in branches.items():
         from_bus = branch['from_bus']
         to_bus = branch['to_bus']
@@ -105,8 +105,8 @@ def create_btheta_losses_dcopf_model(model_data, relaxation_type=RelaxationType.
         ifj_init = tx_calc.calculate_ifj(vr_init[from_bus], vj_init[from_bus], vr_init[to_bus],
                                          vj_init[to_bus], y_matrix)
         pf_init[branch_name] = tx_calc.calculate_p(ifr_init, ifj_init, vr_init[from_bus], vj_init[from_bus])
-    pfl_bounds = {k: (0,p_max[k]**2) for k in branches.keys()}
-    pfl_init = {k: 0 for k in branches.keys()}
+    pfl_bounds = {k: (0,p_max[k]**2) for k in branches}
+    pfl_init = {k: 0 for k in branches}
 
     libbranch.declare_var_pf(model=model,
                              index_set=branch_attrs['names'],
@@ -230,9 +230,9 @@ def create_ptdf_losses_dcopf_model(model_data, include_feasibility_slack=False):
     ### declare the current flows in the branches
     vr_init = {k: bus_attrs['vm'][k] * pe.cos(bus_attrs['va'][k]) for k in bus_attrs['vm']}
     vj_init = {k: bus_attrs['vm'][k] * pe.sin(bus_attrs['va'][k]) for k in bus_attrs['vm']}
-    p_max = {k: branches[k]['rating_long_term'] for k in branches.keys()}
-    pf_bounds = {k: (-p_max[k],p_max[k]) for k in branches.keys()}
-    pf_init = dict()
+    p_max = {k: branches[k]['rating_long_term'] for k in branches}
+    pf_bounds = {k: (-p_max[k],p_max[k]) for k in branches}
+    pf_init = {}
     for branch_name, branch in branches.items():
         from_bus = branch['from_bus']
         to_bus = branch['to_bus']
@@ -242,8 +242,8 @@ def create_ptdf_losses_dcopf_model(model_data, include_feasibility_slack=False):
         ifj_init = tx_calc.calculate_ifj(vr_init[from_bus], vj_init[from_bus], vr_init[to_bus],
                                          vj_init[to_bus], y_matrix)
         pf_init[branch_name] = tx_calc.calculate_p(ifr_init, ifj_init, vr_init[from_bus], vj_init[from_bus])
-    pfl_bounds = {k: (-p_max[k]**2,p_max[k]**2) for k in branches.keys()}
-    pfl_init = {k: 0 for k in branches.keys()}
+    pfl_bounds = {k: (-p_max[k]**2,p_max[k]**2) for k in branches}
+    pfl_init = {k: 0 for k in branches}
 
     libbranch.declare_var_pf(model=model,
                              index_set=branch_attrs['names'],

@@ -42,6 +42,9 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
         generator is on at t0, the real power output at t0, and the reactive power output at t0. 
         If this is None, default values are loaded.
     """
+    day_ahead_load_file = '../timeseries_data_files/Load/new_load_time_series_DA.csv'
+    real_time_load_file = '../timeseries_data_files/Load/new_load_time_series_RT.csv'
+
     for simulation in ['DAY_AHEAD', 'REAL_TIME']:
         simulation = simulation.upper()
 
@@ -79,15 +82,11 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
         system = md_obj.data["system"]
         elements = md_obj.data["elements"]
 
-        if simulation == "DAY_AHEAD":
-            system["time_period_length_minutes"] = 60
-        else:
-            system["time_period_length_minutes"] = 5
-
+        system["time_period_length_minutes"] = 60 if simulation == "DAY_AHEAD" else 5
         # compute aggregate load per area, and then compute 
         # load participation factors from each bus from that data.
         region_total_load = {}
-        areas = ["Area"+str(i) for i in range(1,4)]
+        areas = [f"Area{str(i)}" for i in range(1,4)]
         for this_region in areas:
             this_region_total_load = 0.0
             ## loads have exactly one bus
@@ -96,7 +95,7 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
                 if bus["area"] == this_region:
                     this_region_total_load += load["p_load"]
             region_total_load[this_region] = this_region_total_load
-        
+
         bus_load_participation_factor_dict = {}
         bus_Ql_over_Pl_dict = {}
         for name, load in md_obj.elements("load"):
@@ -104,14 +103,14 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
             bus_load_participation_factor_dict[name] = load["p_load"] / region_total_load[bus["area"]]
             bus_Ql_over_Pl_dict[name] = load["q_load"] / load["p_load"]
 
-        timeseries_pointer_dict = {} 
+        timeseries_pointer_dict = {}
         for timeseries_pointer_index in timeseries_pointer_df.index.tolist():
             this_timeseries_pointer_dict = timeseries_pointer_df.loc[timeseries_pointer_index].to_dict()
             new_timeseries_pointer = TimeSeriesPointer(this_timeseries_pointer_dict["Object"],
                                                     this_timeseries_pointer_dict["Simulation"],
                                                     this_timeseries_pointer_dict["Parameter"],
                                                     os.path.join(base_dir, this_timeseries_pointer_dict["Data File"]))
-        
+
             timeseries_pointer_dict[(new_timeseries_pointer.Object, new_timeseries_pointer.Simulation)] = new_timeseries_pointer
 
         load_timeseries_spec = timeseries_pointer_dict[("Load",simulation)]
@@ -121,23 +120,22 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
         end_mask = load_timeseries_df["DateTime"] < end_time
         masked_load_timeseries_df = load_timeseries_df[start_mask & end_mask]
         load_dict = masked_load_timeseries_df.to_dict(orient='split')
-        load_timeseries = []
-        for load_row in load_dict["data"]:
-            load_timeseries.append(Load(load_row[0],
-                                        float(load_row[1]),
-                                        float(load_row[2]),
-                                        float(load_row[3])))
-        
-        times = []
-        for load in load_timeseries:
-            times.append(str(load.DateTime))
-
+        load_timeseries = [
+            Load(
+                load_row[0],
+                float(load_row[1]),
+                float(load_row[2]),
+                float(load_row[3]),
+            )
+            for load_row in load_dict["data"]
+        ]
+        times = [str(load.DateTime) for load in load_timeseries]
         system["time_indices"] = times
 
         ## load into grid_network object
         ## First, load Pl, Ql
         for name, load in md_obj.elements("load"):
-            pl_dict, ql_dict = dict(), dict()
+            pl_dict, ql_dict = {}, {}
             bus = elements["bus"][load["bus"]]
             for load_time in load_timeseries:
                 area_load = getattr(load_time,bus["area"])
@@ -145,29 +143,24 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
                 ql_dict[str(load_time.DateTime)] = pl_dict[str(load_time.DateTime)]*bus_Ql_over_Pl_dict[name]
             load["p_load"] = _make_time_series_dict(pl_dict)
             load["q_load"] = _make_time_series_dict(ql_dict)
-        
+
         new_load_time_series = []
 
-        day_ahead_load_file = '../timeseries_data_files/Load/new_load_time_series_DA.csv'
-        real_time_load_file = '../timeseries_data_files/Load/new_load_time_series_RT.csv'
-
         for ix, load_time in enumerate(load_timeseries, start=0):
-            load_time_series_record = {}
-            load_time_series_record['Year'] = load_time.DateTime.year
-            load_time_series_record['Month'] = load_time.DateTime.month
-            load_time_series_record['Day'] = load_time.DateTime.day
-
-            if simulation == 'DAY_AHEAD':
-                load_time_series_record['Period'] = (ix % 24) + 1
-            else:
-                load_time_series_record['Period'] = (ix % (24*12)) + 1
-
+            load_time_series_record = {
+                'Year': load_time.DateTime.year,
+                'Month': load_time.DateTime.month,
+                'Day': load_time.DateTime.day,
+                'Period': (ix % 24) + 1
+                if simulation == 'DAY_AHEAD'
+                else (ix % (24 * 12)) + 1,
+            }
             for name, load in md_obj.elements('load'):
                 bus = elements['bus'][load['bus']]
                 area_load = getattr(load_time, bus['area'])
 
                 load_time_series_record[name] = round(bus_load_participation_factor_dict[name]*area_load, 2)
-                
+
             new_load_time_series.append(load_time_series_record)
 
         new_load_time_series_df = pd.DataFrame(new_load_time_series)
@@ -177,11 +170,12 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
 
         # Augment time series pointer dataframe.
         for name, load in md_obj.elements('load'):
-            new_load_timeseries_spec = {}
-            new_load_timeseries_spec['Object'] = name
-            new_load_timeseries_spec['Parameter'] = 'Requirement'
-            new_load_timeseries_spec['Simulation'] = 'DAY_AHEAD'
-            new_load_timeseries_spec['Data File'] = day_ahead_load_file
+            new_load_timeseries_spec = {
+                'Object': name,
+                'Parameter': 'Requirement',
+                'Simulation': 'DAY_AHEAD',
+                'Data File': day_ahead_load_file,
+            }
             timeseries_pointer_df = timeseries_pointer_df.append(new_load_timeseries_spec, ignore_index=True)
 
             new_load_timeseries_spec = {}
@@ -190,7 +184,7 @@ def convert_load_by_area_to_source(data_dir, begin_time, end_time, t0_state=None
             new_load_timeseries_spec['Simulation'] = 'REAL_TIME'
             new_load_timeseries_spec['Data File'] = real_time_load_file
             timeseries_pointer_df = timeseries_pointer_df.append(new_load_timeseries_spec, ignore_index=True)
-        
+
         timeseries_pointer_df.loc[timeseries_pointer_df['Object'] != 'Load'].to_csv(os.path.join(data_dir, 'SourceData', 'timeseries_pointers.csv'), index=False)
 
 def create_ModelData(data_dir, begin_time, end_time, simulation="DAY_AHEAD", t0_state = None):

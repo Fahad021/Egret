@@ -5,7 +5,7 @@ import unittest
 try:
     import matplotlib
     import seaborn
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     viz_packages_installed = False
 else:
     viz_packages_installed = True
@@ -24,7 +24,18 @@ class TestStackGraphWithUCTestInstances(unittest.TestCase):
     def test_standard_stack_graph(self):
         """Tests standard stack graph generation."""
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        test_cases = [os.path.join(current_dir, '..', '..', 'models', 'tests', 'uc_test_instances', 'test_case_{}.json'.format(i)) for i in range(1,6)]
+        test_cases = [
+            os.path.join(
+                current_dir,
+                '..',
+                '..',
+                'models',
+                'tests',
+                'uc_test_instances',
+                f'test_case_{i}.json',
+            )
+            for i in range(1, 6)
+        ]
 
         for test_case in test_cases:   
             with open(test_case, 'r') as f:
@@ -52,7 +63,18 @@ class TestStackGraphWithUCTestInstances(unittest.TestCase):
     def test_individual_component_stack_graph(self):
         """Tests stack graph generation when breaking out individual components per generation type."""
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        test_cases = [os.path.join(current_dir, '..', '..', 'models', 'tests', 'uc_test_instances', 'test_case_{}.json'.format(i)) for i in range(1, 2)]
+        test_cases = [
+            os.path.join(
+                current_dir,
+                '..',
+                '..',
+                'models',
+                'tests',
+                'uc_test_instances',
+                f'test_case_{i}.json',
+            )
+            for i in range(1, 2)
+        ]
 
         for test_case in test_cases:   
             with open(test_case, 'r') as f:
@@ -80,7 +102,18 @@ class TestStackGraphWithUCTestInstances(unittest.TestCase):
     def test_individual_generator_stack_graph(self):
         """Tests stack graph generation when plotting individual generators."""
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        test_cases = [os.path.join(current_dir, '..', '..', 'models', 'tests', 'uc_test_instances', 'test_case_{}.json'.format(i)) for i in range(1, 2)]
+        test_cases = [
+            os.path.join(
+                current_dir,
+                '..',
+                '..',
+                'models',
+                'tests',
+                'uc_test_instances',
+                f'test_case_{i}.json',
+            )
+            for i in range(1, 2)
+        ]
 
         for test_case in test_cases:   
             with open(test_case, 'r') as f:
@@ -110,7 +143,18 @@ class TestStackGraphWithUCTestInstances(unittest.TestCase):
     def test_individual_generator_stack_graph_exception(self):
         """Tests for stack graph generation to fail when both 'show_individual_components' and 'plot_individual_generators' are simultaneously True."""
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        test_cases = [os.path.join(current_dir, '..', '..', 'models', 'tests', 'uc_test_instances', 'test_case_{}.json'.format(i)) for i in range(1, 2)]
+        test_cases = [
+            os.path.join(
+                current_dir,
+                '..',
+                '..',
+                'models',
+                'tests',
+                'uc_test_instances',
+                f'test_case_{i}.json',
+            )
+            for i in range(1, 2)
+        ]
 
         for test_case in test_cases:   
             with open(test_case, 'r') as f:

@@ -10,6 +10,7 @@
 '''
 acopf tester
 '''
+
 import os
 import math
 import unittest
@@ -21,15 +22,31 @@ from egret.parsers.matpower_parser import create_ModelData
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 case_names = ['pglib_opf_case3_lmbd','pglib_opf_case30_ieee','pglib_opf_case300_ieee','pglib_opf_case3012wp_k']
-test_cases = [os.path.join(current_dir, 'transmission_test_instances', 'pglib-opf-master', '{}.m'.format(i)) for i in case_names]
-soln_cases = [os.path.join(current_dir, 'transmission_test_instances', 'acopf_solution_files', '{}_acopf_solution.json'.format(i)) for i in case_names]
+test_cases = [
+    os.path.join(
+        current_dir,
+        'transmission_test_instances',
+        'pglib-opf-master',
+        f'{i}.m',
+    )
+    for i in case_names
+]
+soln_cases = [
+    os.path.join(
+        current_dir,
+        'transmission_test_instances',
+        'acopf_solution_files',
+        f'{i}_acopf_solution.json',
+    )
+    for i in case_names
+]
 
 
 class TestPSVACOPF(unittest.TestCase):
     show_output = True
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         download_dir = os.path.join(current_dir, 'transmission_test_instances')
         if not os.path.exists(os.path.join(download_dir, 'pglib-opf-master')):
             from egret.thirdparty.get_pglib import get_pglib
@@ -44,9 +61,7 @@ class TestPSVACOPF(unittest.TestCase):
 
         md_dict = create_ModelData(test_case)
 
-        kwargs = {}
-        if include_kwargs:
-            kwargs = {'include_feasibility_slack':True}
+        kwargs = {'include_feasibility_slack':True} if include_kwargs else {}
         md, results = solve_acopf(md_dict, "ipopt", acopf_model_generator=acopf_model, solver_tee=False, return_results=True, **kwargs)
 
         self.assertTrue(results.solver.termination_condition == TerminationCondition.optimal)
@@ -58,7 +73,7 @@ class TestRSVACOPF(unittest.TestCase):
     show_output = True
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         download_dir = os.path.join(current_dir, 'transmission_test_instances')
         if not os.path.exists(os.path.join(download_dir, 'pglib-opf-master')):
             from egret.thirdparty.get_pglib import get_pglib
@@ -73,9 +88,7 @@ class TestRSVACOPF(unittest.TestCase):
 
         md_dict = create_ModelData(test_case)
 
-        kwargs = {}
-        if include_kwargs:
-            kwargs = {'include_feasibility_slack':True}
+        kwargs = {'include_feasibility_slack':True} if include_kwargs else {}
         md, results = solve_acopf(md_dict, "ipopt", acopf_model_generator=acopf_model, solver_tee=False, return_results=True, **kwargs)
 
         self.assertTrue(results.solver.termination_condition == TerminationCondition.optimal)
@@ -87,7 +100,7 @@ class TestRIVACOPF(unittest.TestCase):
     show_output = True
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         download_dir = os.path.join(current_dir, 'transmission_test_instances')
         if not os.path.exists(os.path.join(download_dir, 'pglib-opf-master')):
             from egret.thirdparty.get_pglib import get_pglib
@@ -102,9 +115,7 @@ class TestRIVACOPF(unittest.TestCase):
 
         md_dict = create_ModelData(test_case)
 
-        kwargs = {}
-        if include_kwargs:
-            kwargs = {'include_feasibility_slack':True}
+        kwargs = {'include_feasibility_slack':True} if include_kwargs else {}
         md, results = solve_acopf(md_dict, "ipopt", acopf_model_generator=acopf_model, solver_tee=False, return_results=True, **kwargs)
 
         self.assertTrue(results.solver.termination_condition == TerminationCondition.optimal)

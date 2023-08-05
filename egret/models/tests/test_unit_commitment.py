@@ -10,6 +10,7 @@
 '''
 unit commitment tester
 '''
+
 import json
 import os
 import math
@@ -23,23 +24,26 @@ from egret.models.unit_commitment import *
 from egret.data.model_data import ModelData
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-test_cases = [os.path.join(current_dir,'uc_test_instances', 'test_case_{}.json'.format(i)) for i in range(1,6)]
+test_cases = [
+    os.path.join(current_dir, 'uc_test_instances', f'test_case_{i}.json')
+    for i in range(1, 6)
+]
 test_int_objvals = [4201915.017320504, 5454367.7670904165, 5999272.361123627, 5461120.3231092375, 6062406.32677043]
 
 def _test_uc_model(uc_model, relax=False, test_objvals=test_int_objvals):
 
     for test_case, ref_objval in zip(test_cases, test_objvals):
-    
+
         md_dict = json.load(open(test_case,'r'))
         md = ModelData(md_dict)
-        
+
         if relax:
             model = uc_model(md, relaxed=relax)
             opt = SolverFactory('cbc')
         else:
             model = uc_model(md)
             opt = SolverFactory('gurobi')
-            if opt == None:
+            if opt is None:
                 # one of gurobi or cplex should be available, per the check for existence below
                 opt = SolverFactory('cplex')
             opt.options['mipgap'] = 0.0
@@ -117,10 +121,14 @@ def test_CA_uc_model():
 def test_uc_runner():
     test_names = ['tiny_uc_1', 'tiny_uc_2']
     for test_name in test_names:
-        input_json_file_name = os.path.join(current_dir, 'uc_test_instances', test_name+'.json')
+        input_json_file_name = os.path.join(
+            current_dir, 'uc_test_instances', f'{test_name}.json'
+        )
         md_in = ModelData(json.load(open(input_json_file_name, 'r')))
         md_results = solve_unit_commitment(md_in, solver='cbc', mipgap=0.0)
 
-        reference_json_file_name = os.path.join(current_dir, 'uc_test_instances', test_name+'_results.json')
+        reference_json_file_name = os.path.join(
+            current_dir, 'uc_test_instances', f'{test_name}_results.json'
+        )
         md_reference = ModelData(json.load(open(reference_json_file_name, 'r')))
         assert math.isclose(md_reference.data['system']['total_cost'], md_results.data['system']['total_cost'])

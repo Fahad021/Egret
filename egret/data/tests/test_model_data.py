@@ -126,10 +126,10 @@ def test_elements():
     md = ModelData(dict(testdata))
 
     for n,e in md.elements(element_type="generator"):
-        assert n == 'G1' or n =='G2'
+        assert n in ['G1', 'G2']
         if n == 'G1':
             assert e["generator_type"] == 'thermal'
-        if n == 'G2':
+        elif n == 'G2':
             assert e["generator_type"] == 'solar'
 
     buses = dict(md.elements(element_type='bus'))

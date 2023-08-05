@@ -317,11 +317,11 @@ def rajan_takriti_UT_DT_2bin(model):
     '''
 
     _add_fixed_and_initial(model)
-    
+
     #######################
     # up-time constraints #
     #######################
-    
+
     def uptime_rule(m,g,t):
         if t < value(m.ScaledMinimumUpTime[g]):
             return Constraint.Skip
@@ -329,14 +329,14 @@ def rajan_takriti_UT_DT_2bin(model):
             return sum(m.UnitStart[g,i] for i in m.TimePeriods if i >= t - value(m.ScaledMinimumUpTime[g]) + 1 and i <= t-1) <= m.UnitStayOn[g,t] 
         else:
             return sum(m.UnitStart[g,i] for i in m.TimePeriods if i >= t - value(m.ScaledMinimumUpTime[g]) + 1 and i <= t) <= m.UnitOn[g,t] 
-    
+
     model.UpTime = Constraint(model.ThermalGenerators, model.TimePeriods, rule=uptime_rule)
-    
-    
+
+
     #########################
     # down-time constraints #
     #########################
-    
+
     ## equation (5) and Rajan-Takriti
     def downtime_rule(m,g,t):
         if t < value(m.ScaledMinimumDownTime[g]):
@@ -345,7 +345,7 @@ def rajan_takriti_UT_DT_2bin(model):
             return sum(m.UnitStart[g,i] for i in m.TimePeriods if i >= t - value(m.ScaledMinimumDownTime[g]) + 1 and i <= t) <= 1 - m.UnitOnT0[g]
         else: 
             return sum(m.UnitStart[g,i] for i in m.TimePeriods if i >= t - value(m.ScaledMinimumDownTime[g]) + 1 and i <= t) <= 1 - m.UnitOn[g,t-value(m.ScaledMinimumDownTime[g])] 
-    
+
     model.DownTime = Constraint(model.ThermalGenerators,model.TimePeriods,rule=downtime_rule)
 
     if model.status_vars in ['garver_3bin_vars', 'garver_3bin_relaxed_stop_vars']:
@@ -358,4 +358,6 @@ def rajan_takriti_UT_DT_2bin(model):
         _ALS_logic(model)
 
     else:
-        raise Exception("Couldn't find logic constraint for status_vars "+model.status_vars)
+        raise Exception(
+            f"Couldn't find logic constraint for status_vars {model.status_vars}"
+        )

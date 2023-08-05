@@ -116,9 +116,12 @@ def calculate_ifr(vfr, vfj, vtr, vtj, y_matrix):
     Compute ifr from voltages and the y_matrix (computed
     from the branch properties using :py:meth:`calculate_branch_y_matrix`)
     """
-    ifr = y_matrix['ifr', 'vfr'] * vfr + y_matrix['ifr', 'vfj'] * vfj + \
-        y_matrix['ifr', 'vtr'] * vtr + y_matrix['ifr', 'vtj'] * vtj
-    return ifr
+    return (
+        y_matrix['ifr', 'vfr'] * vfr
+        + y_matrix['ifr', 'vfj'] * vfj
+        + y_matrix['ifr', 'vtr'] * vtr
+        + y_matrix['ifr', 'vtj'] * vtj
+    )
 
 
 def calculate_ifj(vfr, vfj, vtr, vtj, y_matrix):
@@ -126,9 +129,12 @@ def calculate_ifj(vfr, vfj, vtr, vtj, y_matrix):
     Compute ify from voltages and the y_matrix (computed
     from the branch properties using :py:meth:`calculate_branch_y_matrix`)
     """
-    ifj = y_matrix['ifj', 'vfr'] * vfr + y_matrix['ifj', 'vfj'] * vfj + \
-        y_matrix['ifj', 'vtr'] * vtr + y_matrix['ifj', 'vtj'] * vtj
-    return ifj
+    return (
+        y_matrix['ifj', 'vfr'] * vfr
+        + y_matrix['ifj', 'vfj'] * vfj
+        + y_matrix['ifj', 'vtr'] * vtr
+        + y_matrix['ifj', 'vtj'] * vtj
+    )
 
 
 def calculate_itr(vfr, vfj, vtr, vtj, y_matrix):
@@ -136,9 +142,12 @@ def calculate_itr(vfr, vfj, vtr, vtj, y_matrix):
     Compute itr from voltages and the y_matrix (computed
     from the branch properties using :py:meth:`calculate_branch_y_matrix`)
     """
-    itr = y_matrix['itr', 'vfr'] * vfr + y_matrix['itr', 'vfj'] * vfj + \
-        y_matrix['itr', 'vtr'] * vtr + y_matrix['itr', 'vtj'] * vtj
-    return itr
+    return (
+        y_matrix['itr', 'vfr'] * vfr
+        + y_matrix['itr', 'vfj'] * vfj
+        + y_matrix['itr', 'vtr'] * vtr
+        + y_matrix['itr', 'vtj'] * vtj
+    )
 
 
 def calculate_itj(vfr, vfj, vtr, vtj, y_matrix):
@@ -146,41 +155,40 @@ def calculate_itj(vfr, vfj, vtr, vtj, y_matrix):
     Compute itj from voltages and the y_matrix (computed
     from the branch properties using :py:meth:`calculate_branch_y_matrix`)
     """
-    itj = y_matrix['itj', 'vfr'] * vfr + y_matrix['itj', 'vfj'] * vfj + \
-        y_matrix['itj', 'vtr'] * vtr + y_matrix['itj', 'vtj'] * vtj
-    return itj
+    return (
+        y_matrix['itj', 'vfr'] * vfr
+        + y_matrix['itj', 'vfj'] * vfj
+        + y_matrix['itj', 'vtr'] * vtr
+        + y_matrix['itj', 'vtj'] * vtj
+    )
 
 
 def calculate_ir(p, q, vr, vj):
     """
     Compute ir from power flows and voltages
     """
-    ir = (q*vj+p*vr)/(vj**2 + vr**2)
-    return ir
+    return (q*vj+p*vr)/(vj**2 + vr**2)
 
 
 def calculate_ij(p, q, vr, vj):
     """
     Compute ij from power flows and voltages
     """
-    ij = (p*vj-q*vr)/(vj**2 + vr**2)
-    return ij
+    return (p*vj-q*vr)/(vj**2 + vr**2)
 
 
 def calculate_p(ir, ij, vr, vj):
     """
     Compute real power flow from currents and voltages
     """
-    p = vr * ir + vj * ij
-    return p
+    return vr * ir + vj * ij
 
 
 def calculate_q(ir, ij, vr, vj):
     """
     Compute reactive power flow from currents and voltages
     """
-    q = vj * ir - vr * ij
-    return q
+    return vj * ir - vr * ij
 
 
 def calculate_vr_from_vm_va(vm, va):
@@ -199,10 +207,7 @@ def calculate_vr_from_vm_va(vm, va):
         float : the value of vr or None if
            either vm or va (or both) is None
     """
-    if vm is not None and va is not None:
-        vr = vm * math.cos(va*math.pi/180)
-        return vr
-    return None
+    return None if vm is None or va is None else vm * math.cos(va*math.pi/180)
 
 
 def calculate_vj_from_vm_va(vm, va):
@@ -221,10 +226,7 @@ def calculate_vj_from_vm_va(vm, va):
         float : the value of vj or None if
            either vm or va (or both) is None
     """
-    if vm is not None and va is not None:
-        vj = vm * math.sin(va*math.pi/180)
-        return vj
-    return None
+    return None if vm is None or va is None else vm * math.sin(va*math.pi/180)
 
 
 def calculate_vm_from_vj_vr(vj,vr):
@@ -243,10 +245,7 @@ def calculate_vm_from_vj_vr(vj,vr):
         float : the value of the voltage magnitude vm or None if
            either vj or vr (or both) is None
     """
-    if vj is not None and vr is not None:
-        vm = math.sqrt(vj**2 + vr**2)
-        return vm
-    return None
+    return math.sqrt(vj**2 + vr**2) if vj is not None and vr is not None else None
 
 
 def calculate_va_from_vj_vr(vj, vr):
@@ -265,10 +264,7 @@ def calculate_va_from_vj_vr(vj, vr):
         float : the value of the voltage angle va in degrees or None if
            either vj or vr (or both) is None
     """
-    if vj is not None and vr is not None:
-        va = math.degrees(math.atan(vj/vr))
-        return va
-    return None
+    return None if vj is None or vr is None else math.degrees(math.atan(vj/vr))
 
 
 def _calculate_J11(branches,buses,index_set_branch,index_set_bus,base_point=BasePointType.FLATSTART,approximation_type=ApproximationType.PTDF):
@@ -551,7 +547,6 @@ def calculate_ptdf(branches,buses,index_set_branch,index_set_bus,reference_bus,b
     except np.linalg.LinAlgError:
         print("Matrix not invertible. Calculating pseudo-inverse instead.")
         SENSI = np.linalg.pinv(J0,rcond=1e-7)
-        pass
     SENSI = SENSI[:-1,:-1]
 
     PTDF = np.matmul(J,SENSI)
@@ -594,7 +589,6 @@ def calculate_ptdf_ldf(branches,buses,index_set_branch,index_set_bus,reference_b
     except np.linalg.LinAlgError:
         print("Matrix not invertible. Calculating pseudo-inverse instead.")
         SENSI = np.linalg.pinv(J0,rcond=1e-7)
-        pass
     SENSI = SENSI[:-1,:-1]
 
     PTDF = np.matmul(J, SENSI)

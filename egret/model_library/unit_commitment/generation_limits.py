@@ -92,9 +92,9 @@ def MLR_generation_limits(model):
 
     with lower limits if required
     '''
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
     _MLR_generation_limits(model, False)
 
@@ -114,9 +114,9 @@ def gentile_generation_limits(model):
 
     with lower limits if required.
     '''
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
     _MLR_generation_limits(model, True)
 
@@ -155,11 +155,11 @@ def pan_guan_gentile_generation_limits(model):
     gentile_generation_limits for generators with UT==1 plus
     pan_guan_generation_limits     
     '''
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
-    
+
     #add the strenghtened MLR generation limits fot UT==1 generators
     _MLR_generation_limits_uptime_1(model,True)
     _pan_guan_generation_limits(model,False)
@@ -236,9 +236,9 @@ def pan_guan_gentile_KOW_generation_limits(model):
     
     '''
     
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
     #add the strenghtened MLR generation limits fot UT==1 generators
     _MLR_generation_limits_uptime_1(model,True)
@@ -262,9 +262,9 @@ def pan_guan_generation_limits(model):
     as modified in the text for different up/down ramps
     '''
 
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
     _pan_guan_generation_limits(model,True)
 
@@ -305,9 +305,9 @@ def OAV_generation_limits(model):
     This makes this formulation then identical to CA and MLR
     '''
 
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
     _OAV_generation_limits(model)
 
@@ -330,9 +330,9 @@ def OAV_generation_limits_enhanced(model):
     This makes this formulation then identical to CA and MLR
     '''
 
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
     _OAV_generation_limits(model)
 
@@ -357,6 +357,7 @@ def OAV_generation_limits_enhanced(model):
         return m.PowerGenerated[g,t] <= m.MaximumPowerOutput[g]*m.UnitOn[g,t+K_t] \
                                       + sum((m.ScaledShutdownRampLimit[g] + (i-1)*m.ScaledNominalRampDownLimit[g])*m.UnitStop[g,t+i] for i in range(1,K_t+1)) \
                                       - sum(m.MaximumPowerOutput[g]*m.UnitStart[g,t+i] for i in range(1,K_t+1))
+
     model.OAVUpperBound = Constraint(model.ThermalGenerators, model.TimePeriods, rule=oav_upper_bound_rule)
 
 
@@ -377,17 +378,18 @@ def CA_generation_limits(model):
     an upper-bound constraint, which is why it is placed here.
     '''
 
-    if model.power_vars in ['garver_power_vars',]:
-        pass
-    else:
+    if model.power_vars not in [
+        'garver_power_vars',
+    ]:
         _CA_lower_limit(model)
 
     def enforce_max_capacity_rule(m, g, t):
         return m.MaximumPowerAvailable[g,t] <= m.MaximumPowerOutput[g]*m.UnitOn[g,t]
+
     model.EnforceMaxCapacity = Constraint(model.ThermalGenerators, model.TimePeriods, rule=enforce_max_capacity_rule)
 
     # the following constraint encodes Constraint 19 defined in Carrion and Arroyo.
-    
+
     def enforce_max_available_ramp_down_rates_rule(m, g, t):
         #NOTE: As expressed in Carrion-Arroyo and subsequently here, this constraint does NOT consider ramp down from initial conditions to t=1!
         if t == value(m.NumTimePeriods):
@@ -396,7 +398,7 @@ def CA_generation_limits(model):
            return m.MaximumPowerAvailable[g, t] <= \
                   m.MaximumPowerOutput[g] * m.UnitOn[g, t+1] + \
                   m.ScaledShutdownRampLimit[g] * (m.UnitOn[g, t] - m.UnitOn[g, t+1])
-    
+
     model.EnforceMaxAvailableRampDownRates = Constraint(model.ThermalGenerators, model.TimePeriods, rule=enforce_max_available_ramp_down_rates_rule)
 
 @add_model_attr(component_name, requires = {'data_loader': None,

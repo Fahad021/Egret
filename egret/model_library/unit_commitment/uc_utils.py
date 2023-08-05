@@ -23,19 +23,29 @@ def add_model_attr(attr, requires = {}):
             ## tag this function in the model with the appropriate attribute
             model = args[0]
             if hasattr(model, attr):
-                raise Exception("Exception adding %s! Model already has %s %s! You may only add one type of %s!"%(func.__name__, attr, getattr(model,attr), attr)) 
+                raise Exception(
+                    f"Exception adding {func.__name__}! Model already has {attr} {getattr(model, attr)}! You may only add one type of {attr}!"
+                )
             # this checks to see if the required components were already added
             for base_attr in requires:
                 if not hasattr(model, base_attr):
-                    raise Exception("Exception adding %s! %s requires some %s to be added first!"%(func.__name__, func.__name__, base_attr)) 
+                    raise Exception(
+                        f"Exception adding {func.__name__}! {func.__name__} requires some {base_attr} to be added first!"
+                    )
                 ## None in this context means there is no specific requirement
                 if requires[base_attr] is None:
                     continue
                 if getattr(model, base_attr) not in requires[base_attr]:
-                    raise Exception("Exception adding %s! %s requires one of: "%(func.__name__, func.__name__) + ", ".join(requires[base_attr]) + ", to be added first.")
+                    raise Exception(
+                        f"Exception adding {func.__name__}! {func.__name__} requires one of: "
+                        + ", ".join(requires[base_attr])
+                        + ", to be added first."
+                    )
             setattr(model, attr, func.__name__)
             return func(*args, **kwds)
+
         return wrapper
+
     return actual_decorator
 
 ## provides a view on grid_data attributes that
@@ -55,10 +65,7 @@ def build_uc_time_mapping(md_timeperiods):
                 return get_time_attr(_data, pm_t)
             if len(key) == 1:
                 key = key[0]
-            if key in _data:
-                return get_time_attr(_data[key], pm_t)
-            else:
-                return None
+            return get_time_attr(_data[key], pm_t) if key in _data else None
 
         def get_time_attr(att, pm_t):
             if isinstance(att, dict):
@@ -70,4 +77,5 @@ def build_uc_time_mapping(md_timeperiods):
                 return att
 
         return init_rule
+
     return uc_time_helper

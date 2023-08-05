@@ -23,10 +23,9 @@ def declare_var(varname, model, index_set, **kwargs):
     # create var if index set is None
     if index_set is None:
         model.add_component(varname, pe.Var(**kwargs))
-    # transform the index set into a Pyomo Set
     else:
         pyomo_index_set = pe.Set(initialize=index_set, ordered=True)
-        model.add_component("_var_{}_index_set".format(varname), pyomo_index_set)
+        model.add_component(f"_var_{varname}_index_set", pyomo_index_set)
 
         # now create the var
         model.add_component(varname, pe.Var(pyomo_index_set, **kwargs))

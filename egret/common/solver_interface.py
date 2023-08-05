@@ -118,9 +118,7 @@ def _solve_model(model,
 
     if isinstance(solver, str):
         solver = SolverFactory(solver)
-    elif isinstance(solver, pyomo.opt.base.OptSolver):
-        pass
-    else:
+    elif not isinstance(solver, pyomo.opt.base.OptSolver):
         raise Exception('solver must be string or an instanciated pyomo solver')
 
     _set_options(solver, mipgap, timelimit, options)
@@ -133,6 +131,8 @@ def _solve_model(model,
                               symbolic_solver_labels=symbolic_solver_labels)
 
     if results.solver.termination_condition not in safe_termination_conditions:
-        raise Exception('Problem encountered during solve, termination_condition {}'.format(results.solver.terminataion_condition))
+        raise Exception(
+            f'Problem encountered during solve, termination_condition {results.solver.terminataion_condition}'
+        )
 
     return model, results

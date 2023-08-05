@@ -15,10 +15,7 @@ from .uc_utils import add_model_attr
 component_name = 'status_vars'
 
 def _is_relaxed(model):
-    if hasattr(model, 'relax_binaries') and model.relax_binaries:
-        return True
-    else:
-        return False
+    return bool(hasattr(model, 'relax_binaries') and model.relax_binaries)
 
 def _add_unit_on_vars(model, relaxed=False):
     # indicator variables for each generator, at each time period.

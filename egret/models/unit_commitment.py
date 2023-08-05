@@ -781,7 +781,7 @@ def solve_unit_commitment(model_data,
                     lmp_dict[dt] = value(m.dual[m.PowerBalance[b,mt]])
                 b_dict['lmp'] = _time_series_dict(lmp_dict)
     else:
-        raise Exception("Unrecongized network type "+m.power_balance)
+        raise Exception(f"Unrecongized network type {m.power_balance}")
 
 
     if reserve_requirement:
@@ -802,8 +802,8 @@ def solve_unit_commitment(model_data,
 
     ## TODO: Can the code above this be re-factored in a similar way?
     ## as we add more zonal reserve products, they can be added here
-    _zonal_reserve_map = dict()
-    _system_reserve_map = dict()
+    _zonal_reserve_map = {}
+    _system_reserve_map = {}
     if spin:
         _zonal_reserve_map['spinning_reserve_requirement'] = {'shortfall' : 'spinning_reserve_shortfall',
                                                               'price'     : 'spinning_reserve_price',
@@ -846,7 +846,7 @@ def solve_unit_commitment(model_data,
                                                               'price'     : 'regulation_down_price',
                                                               'shortfall_m' : m.SystemRegulationDnShortfall,
                                                               'balance_m' : m.EnforceSystemRegulationDnRequirement,
-                                                             } 
+                                                             }
     if flex:
         _zonal_reserve_map['flexible_ramp_up_requirement'] = { 'shortfall' : 'flexible_ramp_up_shortfall',
                                                               'price' : 'flexible_ramp_up_price',
@@ -908,7 +908,7 @@ def solve_unit_commitment(model_data,
                     for dt, mt in zip(data_time_periods, m.TimePeriods):
                         req_price_dict[dt] = value(m.dual[req_dict['balance_m'][mt]])
                     sys_dict[req_dict['price']] = _time_series_dict(req_price_dict)
-    
+
     _populate_zonal_reserves(areas, 'area_')
     _populate_zonal_reserves(zones, 'zone_')
 
@@ -929,10 +929,8 @@ def solve_unit_commitment(model_data,
     md.data['system']['total_cost'] = value(m.TotalCostObjective)
 
     unscale_ModelData_to_pu(md, inplace=True)
-    
-    if return_model:
-        return md, m
-    return md
+
+    return (md, m) if return_model else md
 
 # if __name__ == '__main__':
 #     from egret.data.model_data import ModelData

@@ -293,7 +293,7 @@ def _OAV_enhanced(model):
 
     
     # the following constraint encodes Constraint 23 defined in OAV
-    
+
     def enforce_ramp_up_limits_rule(m, g, t):
         if value(m.ScaledNominalRampUpLimit[g]) >= value(m.MaximumPowerOutput[g] - m.MinimumPowerOutput[g]) and model.generation_limits in generation_limits_w_startup_shutdown:
             return Constraint.Skip
@@ -326,59 +326,58 @@ def _OAV_enhanced(model):
                return m.MaximumPowerAvailable[g, t] <= m.PowerGenerated[g, t-1] + \
                                                        m.ScaledNominalRampUpLimit[g] * m.UnitOn[g, t-1] + \
                                                        m.ScaledStartupRampLimit[g] * m.UnitStart[g,t]
-    
+
     model.EnforceMaxAvailableRampUpRates = Constraint(model.ThermalGenerators, model.TimePeriods, rule=enforce_ramp_up_limits_rule)
 
     # the following constraint encodes Constraint 7, 20, 21 defined in OAV
-    
+
     def enforce_ramp_down_limits_rule(m, g, t):
         if value(m.ScaledNominalRampDownLimit[g]) >= value(m.MaximumPowerOutput[g] - m.MinimumPowerOutput[g]) and model.generation_limits in generation_limits_w_startup_shutdown:
             return Constraint.Skip
         if t == m.InitialTime:
             if not m.enforce_t1_ramp_rates:
                 return Constraint.Skip
-            else:
-                ## equation 7
-                if (value(m.ScaledNominalRampDownLimit[g]) <= value(m.ScaledStartupRampLimit[g] - m.MinimumPowerOutput[g])) \
-                        or (value(m.ScaledMinimumUpTime[g]) < 2):
-                    return m.PowerGeneratedT0[g] - m.PowerGenerated[g, t] <= \
-                        m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] + \
-                        m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t]
-                elif value(m.ScaledMinimumUpTime[g]) < 3 or value(m.ScaledMinimumDownTime[g]) < 2: # now we can use equation 20
-                    return m.PowerGeneratedT0[g] - m.PowerGenerated[g, t] <= \
-                        + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] \
-                        + m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t] \
-                        - (m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t]
-                else: # we can use equation (21)
-                    return m.PowerGeneratedT0[g] - m.PowerGenerated[g, t] <= \
-                        + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t+1] \
-                        + m.ScaledShutdownRampLimit[g] * m.UnitStop[g, t] \
-                        + m.ScaledNominalRampDownLimit[g] * m.UnitStop[g,t+1] \
-                        -(m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g]) * m.UnitStart[g,t] \
-                        - m.ScaledNominalRampDownLimit[g] * m.UnitStart[g,t+1]
+            ## equation 7
+            if (value(m.ScaledNominalRampDownLimit[g]) <= value(m.ScaledStartupRampLimit[g] - m.MinimumPowerOutput[g])) \
+                    or (value(m.ScaledMinimumUpTime[g]) < 2):
+                return m.PowerGeneratedT0[g] - m.PowerGenerated[g, t] <= \
+                    m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] + \
+                    m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t]
+            elif value(m.ScaledMinimumUpTime[g]) < 3 or value(m.ScaledMinimumDownTime[g]) < 2: # now we can use equation 20
+                return m.PowerGeneratedT0[g] - m.PowerGenerated[g, t] <= \
+                    + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] \
+                    + m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t] \
+                    - (m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t]
+            else: # we can use equation (21)
+                return m.PowerGeneratedT0[g] - m.PowerGenerated[g, t] <= \
+                    + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t+1] \
+                    + m.ScaledShutdownRampLimit[g] * m.UnitStop[g, t] \
+                    + m.ScaledNominalRampDownLimit[g] * m.UnitStop[g,t+1] \
+                    -(m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g]) * m.UnitStart[g,t] \
+                    - m.ScaledNominalRampDownLimit[g] * m.UnitStart[g,t+1]
 
         else:
-                ## equation 7
-                if (value(m.ScaledNominalRampDownLimit[g]) <= value(m.ScaledStartupRampLimit[g] - m.MinimumPowerOutput[g])) \
-                        or (value(m.ScaledMinimumUpTime[g]) < 2):
-                    return m.PowerGenerated[g,t-1] - m.PowerGenerated[g, t] <= \
-                        m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] + \
-                        m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t]
-                elif value(m.ScaledMinimumUpTime[g]) < 3 or value(m.ScaledMinimumDownTime[g]) < 2 or t >= value(m.NumTimePeriods): # now we can use equation 20
-                    return m.PowerGenerated[g,t-1] - m.PowerGenerated[g, t] <= \
-                        + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] \
-                        + m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t] \
-                        -(m.ScaledNominalRampDownLimit[g]-m.ScaledStartupRampLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t-1] \
-                        - (m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t]
-                else: # we can use equation (21)
-                    return m.PowerGenerated[g,t-1] - m.PowerGenerated[g, t] <= \
-                        + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t+1] \
-                        + m.ScaledShutdownRampLimit[g] * m.UnitStop[g, t] \
-                        + m.ScaledNominalRampDownLimit[g] * m.UnitStop[g,t+1] \
-                        -(m.ScaledNominalRampDownLimit[g]-m.ScaledStartupRampLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t-1] \
-                        -(m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g]) * m.UnitStart[g,t] \
-                        - m.ScaledNominalRampDownLimit[g] * m.UnitStart[g,t+1]
-    
+            ## equation 7
+            if (value(m.ScaledNominalRampDownLimit[g]) <= value(m.ScaledStartupRampLimit[g] - m.MinimumPowerOutput[g])) \
+                    or (value(m.ScaledMinimumUpTime[g]) < 2):
+                return m.PowerGenerated[g,t-1] - m.PowerGenerated[g, t] <= \
+                    m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] + \
+                    m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t]
+            elif value(m.ScaledMinimumUpTime[g]) < 3 or value(m.ScaledMinimumDownTime[g]) < 2 or t >= value(m.NumTimePeriods): # now we can use equation 20
+                return m.PowerGenerated[g,t-1] - m.PowerGenerated[g, t] <= \
+                    + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t] \
+                    + m.ScaledShutdownRampLimit[g]  * m.UnitStop[g, t] \
+                    -(m.ScaledNominalRampDownLimit[g]-m.ScaledStartupRampLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t-1] \
+                    - (m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t]
+            else: # we can use equation (21)
+                return m.PowerGenerated[g,t-1] - m.PowerGenerated[g, t] <= \
+                    + m.ScaledNominalRampDownLimit[g] * m.UnitOn[g, t+1] \
+                    + m.ScaledShutdownRampLimit[g] * m.UnitStop[g, t] \
+                    + m.ScaledNominalRampDownLimit[g] * m.UnitStop[g,t+1] \
+                    -(m.ScaledNominalRampDownLimit[g]-m.ScaledStartupRampLimit[g]+m.MinimumPowerOutput[g])*m.UnitStart[g,t-1] \
+                    -(m.ScaledNominalRampDownLimit[g]+m.MinimumPowerOutput[g]) * m.UnitStart[g,t] \
+                    - m.ScaledNominalRampDownLimit[g] * m.UnitStart[g,t+1]
+
     model.EnforceScaledNominalRampDownLimits = Constraint(model.ThermalGenerators, model.TimePeriods, rule=enforce_ramp_down_limits_rule)
 
 ## TODO: These should really be refactored so we don't double- or triple-up on ramping limits
